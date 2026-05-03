@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    /* 📁 Project Structure */
+    "rootDir": "./src",
+    "outDir": "./dist",
+
+    /* ⚙️ Environment */
+    "module": "commonjs",
+    "target": "es2019",
+    "lib": ["es2019"],
+    "types": ["node"],
+
+    /* 🔧 Compatibility */
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+
+    /* 🧠 Strictness */
+    "strict": true,
+    "skipLibCheck": true,
+
+    /* 🛠️ Dev Experience */
+    "sourceMap": true
+  },
+
+  "include": ["src"],
+  "exclude": ["node_modules"]
+}

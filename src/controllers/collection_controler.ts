@@ -17,7 +17,7 @@ const PROTECTED_DBS = ['admin', 'local', 'config', 'user_auth'];
 const validateName = (name: string) => /^[a-zA-Z0-9_-]+$/.test(name);
 
 // ===============================
-// 🧠 TYPES (FIXES YOUR ERROR)
+// 🧠 TYPES
 // ===============================
 interface DbParams {
   dbName: string;
@@ -49,10 +49,10 @@ export const getDatabases = async (_req: Request, res: Response) => {
     const filtered = result.databases
       .filter((db: any) => !SYSTEM_DBS.includes(db.name))
       .map((db: any) => ({
-         name: db.name,
-  size: db.sizeOnDisk,
-  sizeMB: (db.sizeOnDisk / (1024 * 1024)).toFixed(2), // ✅ ADD
-  empty: db.empty,
+        name: db.name,
+        size: db.sizeOnDisk,
+        sizeMB: (db.sizeOnDisk / (1024 * 1024)).toFixed(2),
+        empty: db.empty,
       }));
 
     res.json(successResponse('Databases fetched', filtered));
@@ -254,6 +254,112 @@ export const insertDocument = async (
     });
 
     res.json(successResponse('Document inserted', { insertedId: result.insertedId }));
+  } catch (error: any) {
+    res.status(500).json(internalError(error.message));
+  }
+};
+
+// ===============================
+// ✅ GET DOCUMENTS
+// ===============================
+export const getDocuments = async (
+  req: Request<CollectionParams>,
+  res: Response
+) => {
+  try {
+    const { dbName, collectionName } = req.params;
+
+    if (!validateName(dbName) || !validateName(collectionName)) {
+      return res.status(400).json(badRequest('Invalid name'));
+    }
+
+    const db = getDB(dbName);
+
+    const exists = await db.listCollections({ name: collectionName }).toArray();
+    if (!exists.length) {
+      return res.status(404).json(notFound('Collection not found'));
+    }
+
+    const documents = await db
+      .collection(collectionName)
+      .find({})
+      .sort({ _id: -1 }) // newest first
+      .limit(100)         // safety cap — remove if you want all
+      .toArray();
+
+    res.json(successResponse('Documents fetched', documents));
+  } catch (error: any) {
+    res.status(500).json(internalError(error.message));
+  }
+};
+
+// ===============================
+// ✅ UPDATE DOCUMENT  — ADD THIS to collection_controler.ts
+// ===============================
+// Also add to imports at the top: ObjectId from 'mongodb'
+// import { ObjectId } from 'mongodb';
+
+export const updateDocument = async (
+  req: Request<CollectionParams & { documentId: string }>,
+  res: Response
+) => {
+  try {
+    const { dbName, collectionName, documentId } = req.params;
+
+    if (!validateName(dbName) || !validateName(collectionName)) {
+      return res.status(400).json(badRequest('Invalid name'));
+    }
+
+    const body = req.body;
+    if (!body || Object.keys(body).length === 0) {
+      return res.status(400).json(badRequest('Request body is empty'));
+    }
+
+    const db = getDB(dbName);
+
+    // Remove _id from update body to avoid immutable field error
+    const { _id, ...updateData } = body;
+
+    const result = await db.collection(collectionName).updateOne(
+      { _id: new Object(documentId) },
+      { $set: { ...updateData, updatedAt: new Date() } }
+    );
+
+    if (result.matchedCount === 0) {
+      return res.status(404).json(notFound('Document not found'));
+    }
+
+    res.json(successResponse('Document updated', { modifiedCount: result.modifiedCount }));
+  } catch (error: any) {
+    res.status(500).json(internalError(error.message));
+  }
+};
+
+// ===============================
+// ✅ DELETE DOCUMENT  — ADD THIS too
+// ===============================
+export const deleteDocument = async (
+  req: Request<CollectionParams & { documentId: string }>,
+  res: Response
+) => {
+  try {
+    const { dbName, collectionName, documentId } = req.params;
+
+    if (!validateName(dbName) || !validateName(collectionName)) {
+      return res.status(400).json(badRequest('Invalid name'));
+    }
+
+    const db = getDB(dbName);
+
+    const result = await db.collection(collectionName).deleteOne({
+      _id: new Object(documentId),
+    });
+
+    if (result.deletedCount === 0) {
+      return res.status(404).json(notFound('Document not found'));
+    }
+
+    res.json(successResponse('Document deleted'));
   } catch (error: any) {
     res.status(500).json(internalError(error.message));
   }

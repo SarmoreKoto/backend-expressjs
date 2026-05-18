@@ -16,6 +16,9 @@ import {
   createCollection,
   deleteCollection,
   insertDocument,    
+  getDocuments,
+  updateDocument,   // ← ADD
+  deleteDocument,   // ← ADD
 } from '../controllers/collection_controler';
 
 const router = Router();
@@ -32,5 +35,7 @@ router.delete('/:dbName/:collectionName', deleteCollection);
 
 // 🔹 DOCUMENTS
 router.post('/:dbName/:collectionName/documents', insertDocument); 
-
+router.get('/:dbName/:collectionName/documents', getDocuments);   // ← ADD THIS
+ router.put('/:dbName/:collectionName/documents/:documentId', updateDocument);    // ← ADD
+router.delete('/:dbName/:collectionName/documents/:documentId', deleteDocument); // ← ADD
 export default router;
